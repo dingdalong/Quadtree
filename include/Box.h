@@ -59,8 +59,8 @@ public:
 
     constexpr bool intersects(const Box<T>& box) const noexcept
     {
-        return !(left >= box.getRight() || getRight() <= box.left ||
-            top >= box.getBottom() || getBottom() <= box.top);
+        return !(left > box.getRight() || getRight() < box.left ||
+            top > box.getBottom() || getBottom() < box.top);
     }
 };
 
