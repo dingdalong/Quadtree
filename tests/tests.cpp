@@ -61,6 +61,34 @@ std::vector<std::pair<Node*, Node*>> findAllIntersections(std::vector<Node>& nod
     return intersections;
 }
 
+TEST(QuadtreeMemoryTest, IncludesNodeAndValueCapacity)
+{
+    auto getBox = [](Node* node)
+    {
+        return node->box;
+    };
+    auto box = Box(0.0f, 0.0f, 1.0f, 1.0f);
+    auto quadtree = Quadtree<Node*, decltype(getBox)>(box, getBox);
+    const auto emptyBytes = quadtree.memoryUsage();
+
+    auto nodes = std::vector<Node>(17);
+    for (std::size_t index = 0; index < nodes.size(); ++index)
+    {
+        const auto x = 0.05f + static_cast<float>(index % 4) * 0.2f;
+        const auto y = 0.05f + static_cast<float>(index / 4) * 0.2f;
+        nodes[index].box = Box(x, y, 0.0f, 0.0f);
+        nodes[index].id = index;
+    }
+
+    quadtree.add(&nodes[0]);
+    const auto oneValueBytes = quadtree.memoryUsage();
+    EXPECT_GT(oneValueBytes, emptyBytes);
+
+    for (std::size_t index = 1; index < nodes.size(); ++index)
+        quadtree.add(&nodes[index]);
+    EXPECT_GT(quadtree.memoryUsage(), oneValueBytes);
+}
+
 bool checkIntersections(std::vector<Node*> nodes1, std::vector<Node*> nodes2)
 {
     if (nodes1.size() != nodes2.size())

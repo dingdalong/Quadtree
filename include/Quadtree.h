@@ -3,6 +3,8 @@
 #include <cassert>
 #include <algorithm>
 #include <array>
+#include <cstddef>
+#include <limits>
 #include <memory>
 #include <type_traits>
 #include <vector>
@@ -63,6 +65,13 @@ public:
         return mBox;
     }
 
+    // Return the bytes retained by the tree's object, nodes, and value arrays.
+    // Allocator bookkeeping and unused capacity outside the tree are excluded.
+    std::size_t memoryUsage() const noexcept
+    {
+        return saturatedAdd(sizeof(*this), memoryUsage(mRoot.get()));
+    }
+
 private:
     static constexpr auto Threshold = std::size_t(16);
     static constexpr auto MaxDepth = std::size_t(8);
@@ -77,6 +86,31 @@ private:
     std::unique_ptr<Node> mRoot;
     GetBox mGetBox;
     Equal mEqual;
+
+    static std::size_t saturatedAdd(std::size_t left, std::size_t right) noexcept
+    {
+        const auto maximum = std::numeric_limits<std::size_t>::max();
+        return left > maximum - right ? maximum : left + right;
+    }
+
+    static std::size_t saturatedMultiply(std::size_t left, std::size_t right) noexcept
+    {
+        const auto maximum = std::numeric_limits<std::size_t>::max();
+        if (left != 0 && right > maximum / left)
+            return maximum;
+        return left * right;
+    }
+
+    std::size_t memoryUsage(const Node* node) const noexcept
+    {
+        if (node == nullptr)
+            return 0;
+
+        auto bytes = saturatedAdd(sizeof(Node), saturatedMultiply(node->values.capacity(), sizeof(T)));
+        for (const auto& child : node->children)
+            bytes = saturatedAdd(bytes, memoryUsage(child.get()));
+        return bytes;
+    }
 
     bool isLeaf(const Node* node) const
     {
